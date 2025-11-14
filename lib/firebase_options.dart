@@ -63,6 +63,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '730140148453',
     projectId: 'gallery-app-rishitha',
     storageBucket: 'gallery-app-rishitha.firebasestorage.app',
+    androidClientId: '730140148453-nv61iqg8kni1t6mosseaifg1v771r3ej.apps.googleusercontent.com',
+    iosClientId: '730140148453-sbkk1tuncih5mvq5niifqbd7q35kitr4.apps.googleusercontent.com',
     iosBundleId: 'com.example.gallery',
   );
 
@@ -72,6 +74,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '730140148453',
     projectId: 'gallery-app-rishitha',
     storageBucket: 'gallery-app-rishitha.firebasestorage.app',
+    androidClientId: '730140148453-nv61iqg8kni1t6mosseaifg1v771r3ej.apps.googleusercontent.com',
+    iosClientId: '730140148453-sbkk1tuncih5mvq5niifqbd7q35kitr4.apps.googleusercontent.com',
     iosBundleId: 'com.example.gallery',
   );
 
@@ -83,4 +87,5 @@ class DefaultFirebaseOptions {
     authDomain: 'gallery-app-rishitha.firebaseapp.com',
     storageBucket: 'gallery-app-rishitha.firebasestorage.app',
   );
+
 }

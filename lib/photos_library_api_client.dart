@@ -25,12 +25,12 @@ class PhotosLibraryApiClient {
   final GoogleSignIn _googleSignIn;
 
   Future<http.Response> get(String url) {
-    return _googleSignIn.currentUser.authHeaders
+    return _googleSignIn.currentUser!.authHeaders
         .then((headers) => http.get(Uri.parse(url), headers: headers));
   }
 
   Future<http.Response> post(String url, String json) {
-    return _googleSignIn.currentUser.authHeaders.then((headers) {
+    return _googleSignIn.currentUser!.authHeaders.then((headers) {
       headers['Content-Type'] = 'application/json';
       return http.post(Uri.parse(url), headers: headers, body: json);
     });
@@ -42,7 +42,7 @@ class PhotosLibraryApiClient {
       'POST',
       Uri.parse('https://photoslibrary.googleapis.com/v1/uploads'),
     );
-    request.headers.addAll(await _googleSignIn.currentUser.authHeaders);
+    request.headers.addAll(await _googleSignIn.currentUser!.authHeaders);
     request.headers['Content-Type'] = 'application/octet-stream';
     request.headers['X-Goog-Upload-File-Name'] = filename;
     request.headers['X-Goog-Upload-Protocol'] = 'raw';
