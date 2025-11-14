@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gallery/screens/gallery_screen.dart';
+import 'package:gallery/screens/google_photos_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -11,6 +13,9 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: <String>[
+    'https://www.googleapis.com/auth/photoslibrary.readonly'
+  ]);
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLogin = true;
@@ -57,6 +62,40 @@ class _AuthScreenState extends State<AuthScreen> {
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _googleSignInHandler() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        // The user canceled the sign-in
+        return;
+      }
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await _auth.signInWithCredential(credential);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) =>
+                  GooglePhotosScreen(googleSignIn: _googleSignIn)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google Sign-In failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -126,6 +165,12 @@ class _AuthScreenState extends State<AuthScreen> {
                 );
               },
               child: const Text('Skip for now'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _googleSignInHandler,
+              icon: const Icon(Icons.login),
+              label: const Text('Sign in with Google'),
             ),
           ],
         ),
