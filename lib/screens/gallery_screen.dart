@@ -169,7 +169,13 @@ class _AlbumTile extends StatelessWidget {
               },
             ),
             title: Text(album.name),
-            subtitle: Text('${album.assetCount} items'),
+            subtitle: FutureBuilder<int>(
+              future: album.assetCountAsync,
+              builder: (context, snapshot) {
+                final count = snapshot.data ?? 0;
+                return Text('$count items');
+              },
+            ),
             onTap: onTap,
           );
         }
@@ -180,7 +186,13 @@ class _AlbumTile extends StatelessWidget {
             color: Colors.grey[300],
           ),
           title: Text(album.name),
-          subtitle: Text('${album.assetCount} items'),
+          subtitle: FutureBuilder<int>(
+            future: album.assetCountAsync,
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return Text('$count items');
+            },
+          ),
         );
       },
     );

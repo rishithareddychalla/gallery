@@ -34,7 +34,7 @@ class _AlbumPhotosScreenState extends State<AlbumPhotosScreen> {
     try {
       final List<AssetEntity> photos = await widget.album.getAssetListRange(
         start: 0,
-        end: widget.album.assetCount,
+        end: await widget.album.assetCountAsync,
       );
       setState(() {
         _photos = photos;
