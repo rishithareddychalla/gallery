@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "730140148453",
+    "project_id": "gallery-app-rishitha",
+    "storage_bucket": "gallery-app-rishitha.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:730140148453:android:c346cd46364ef760ea8a0c",
+        "android_client_info": {
+          "package_name": "com.example.gallery"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqtJvcWe5YuwNetm5c3ujy6cc0oSwTch0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:730140148453:android:7cc8f512b1449515ea8a0c",
+        "android_client_info": {
+          "package_name": "com.example.gallery_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqtJvcWe5YuwNetm5c3ujy6cc0oSwTch0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
