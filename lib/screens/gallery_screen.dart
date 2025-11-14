@@ -1,75 +1,5 @@
 
-// import 'dart:typed_data';
 
-// import 'package:flutter/material.dart';
-// import 'package:photo_manager/photo_manager.dart';
-// import 'package:permission_handler/permission_handler.dart';
-
-// class GalleryScreen extends StatefulWidget {
-//   @override
-//   _GalleryScreenState createState() => _GalleryScreenState();
-// }
-
-// class _GalleryScreenState extends State<GalleryScreen> {
-//   List<AssetEntity> _media = [];
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _fetchMedia();
-//   }
-
-//   _fetchMedia() async {
-//     var status = await Permission.storage.request();
-//     if (status.isGranted) {
-//       final albums = await PhotoManager.getAssetPathList(
-//         type: RequestType.common,
-//       );
-//       final recentAlbum = albums.first;
-//       final recentAssets = await recentAlbum.getAssetListRange(
-//         start: 0,
-//         end: 1000,
-//       );
-//       setState(() => _media = recentAssets);
-//     } else {
-//       // Handle permission denied
-//     }
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text('Gallery'),
-//       ),
-//       body: _media.isEmpty
-//           ? Center(child: CircularProgressIndicator())
-//           : GridView.builder(
-//               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-//                 crossAxisCount: 3,
-//                 crossAxisSpacing: 4.0,
-//                 mainAxisSpacing: 4.0,
-//               ),
-//               itemCount: _media.length,
-//               itemBuilder: (context, index) {
-//                 return FutureBuilder<Uint8List?>(
-//                   future: _media[index].thumbnailData,
-//                   builder: (context, snapshot) {
-//                     if (snapshot.connectionState == ConnectionState.done &&
-//                         snapshot.data != null) {
-//                       return Image.memory(
-//                         snapshot.data!,
-//                         fit: BoxFit.cover,
-//                       );
-//                     }
-//                     return Center(child: CircularProgressIndicator());
-//                   },
-//                 );
-//               },
-//             ),
-//     );
-//   }
-// }
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -89,6 +19,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
   bool _isLoading = true;
   String? _error;
 
+  // ---------- CACHING ----------
+  // thumbnail cache: asset.id → Uint8List
+  final Map<String, Uint8List> _thumbCache = {};
+  // full-image cache: asset.id → Uint8List
+  final Map<String, Uint8List> _fullCache = {};
+
   @override
   void initState() {
     super.initState();
@@ -99,9 +35,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _thumbCache.clear();
+      _fullCache.clear();
     });
 
-    // Request permission using modern APIs
     final PermissionStatus status = await _requestPermission();
     if (!status.isGranted) {
       setState(() {
@@ -112,10 +49,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
     }
 
     try {
-      // Get all albums (galleries)
       final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
-        type: RequestType.common, // images + videos
-        // onlyAll: true, // uncomment to get only "Recent" album
+        type: RequestType.common,
       );
 
       if (albums.isEmpty) {
@@ -126,10 +61,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
         return;
       }
 
-      // Use the first album (usually "Recent" or "All")
       final AssetPathEntity recentAlbum = albums.first;
-
-      // Fetch up to 1000 recent media
       final List<AssetEntity> assets = await recentAlbum.getAssetListRange(
         start: 0,
         end: 1000,
@@ -139,6 +71,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
         _media = assets;
         _isLoading = false;
       });
+
+      // Pre-load thumbnails **off the UI thread** (optional but nice)
+      _preCacheThumbnails(assets);
     } catch (e) {
       setState(() {
         _error = 'Failed to load media: $e';
@@ -147,79 +82,61 @@ class _GalleryScreenState extends State<GalleryScreen> {
     }
   }
 
-  // Future<PermissionStatus> _requestPermission() async {
-  //   // iOS: Use .photos
-  //   // Android: Use .photos (Android 13+), fallback to .storage (older)
-  //   if (Theme.of(context).platform == TargetPlatform.iOS) {
-  //     return await Permission.photos.request();
-  //   } else {
-  //     // Android 13+ (API 33+)
-  //     final isAndroid13OrHigher = Platform.isAndroid && (await PhotoManager.getAndroidSdkVersion()) >= 33;
-  //     if (isAndroid13OrHigher) {
-  //       return await Permission.photos.request();
-  //     } else {
-  //       // Android 12 and below
-  //       return await Permission.storage.request();
-  //     }
-  //   }
-  // }
- // <-- ADD THIS
-
-Future<PermissionStatus> _requestPermission() async {
-  // iOS
-  if (Theme.of(context).platform == TargetPlatform.iOS) {
-    return await Permission.photos.request();
+  // -------------------------------------------------
+  // 1. PRE-CACHE ALL THUMBNAILS (runs in background)
+  // -------------------------------------------------
+  Future<void> _preCacheThumbnails(List<AssetEntity> assets) async {
+    for (final asset in assets) {
+      if (_thumbCache.containsKey(asset.id)) continue;
+      final bytes = await asset.thumbnailDataWithSize(
+        const ThumbnailSize(200, 200),
+      );
+      if (bytes != null && mounted) {
+        _thumbCache[asset.id] = bytes;
+      }
+    }
+    if (mounted) setState(() {}); // refresh once all are cached
   }
 
-  // Android
-  if (!Platform.isAndroid) {
-    return await Permission.photos.request();
-  }
-
-  try {
-    final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-    final AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-    final int sdkInt = androidInfo.version.sdkInt;
-
-    if (sdkInt >= 33) {
+  // -------------------------------------------------
+  // 2. PERMISSION (unchanged, just moved out)
+  // -------------------------------------------------
+  Future<PermissionStatus> _requestPermission() async {
+    if (Theme.of(context).platform == TargetPlatform.iOS) {
       return await Permission.photos.request();
-    } else {
+    }
+
+    if (!Platform.isAndroid) return await Permission.photos.request();
+
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      final androidInfo = await deviceInfo.androidInfo;
+      final sdkInt = androidInfo.version.sdkInt;
+
+      return sdkInt >= 33
+          ? await Permission.photos.request()
+          : await Permission.storage.request();
+    } catch (_) {
       return await Permission.storage.request();
     }
-  } catch (e) {
-    // Fallback: assume older Android
-    return await Permission.storage.request();
   }
-}
 
+  // -------------------------------------------------
+  // 3. BUILD
+  // -------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gallery'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchMedia,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchMedia),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_error!, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _fetchMedia,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
+              ? _errorWidget()
               : _media.isEmpty
                   ? const Center(child: Text('No media found'))
                   : GridView.builder(
@@ -227,41 +144,17 @@ Future<PermissionStatus> _requestPermission() async {
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
-                        crossAxisSpacing: 4.0,
-                        mainAxisSpacing: 4.0,
+                        crossAxisSpacing: 4,
+                        mainAxisSpacing: 4,
                       ),
                       itemCount: _media.length,
                       itemBuilder: (context, index) {
                         final asset = _media[index];
                         return GestureDetector(
-                          onTap: () {
-                            // Optional: Open full image
-                            _showFullImage(asset);
-                          },
-                          child: FutureBuilder<Uint8List?>(
-                            future: asset.thumbnailDataWithSize(
-                              const ThumbnailSize(200, 200),
-                            ),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                      ConnectionState.done &&
-                                  snapshot.data != null) {
-                                return ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.memory(
-                                    snapshot.data!,
-                                    fit: BoxFit.cover,
-                                    gaplessPlayback: true,
-                                  ),
-                                );
-                              }
-                              return Container(
-                                color: Colors.grey[300],
-                                child: const Center(
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                              );
-                            },
+                          onTap: () => _showFullImage(asset),
+                          child: _ThumbTile(
+                            asset: asset,
+                            cache: _thumbCache,
                           ),
                         );
                       },
@@ -269,15 +162,86 @@ Future<PermissionStatus> _requestPermission() async {
     );
   }
 
-  void _showFullImage(AssetEntity asset) async {
-    final Uint8List? data = await asset.originBytes;
-    if (data == null || !mounted) return;
+  // -------------------------------------------------
+  // 4. FULL-IMAGE DIALOG (caches the full bytes)
+  // -------------------------------------------------
+  Future<void> _showFullImage(AssetEntity asset) async {
+    Uint8List? data = _fullCache[asset.id];
+
+    if (data == null) {
+      data = await asset.originBytes;
+      if (data != null && mounted) {
+        _fullCache[asset.id] = data;
+      } else {
+        return;
+      }
+    }
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        child: Image.memory(data, fit: BoxFit.contain),
+      builder: (_) => Dialog(
+        child: Image.memory(data!, fit: BoxFit.contain),
       ),
     );
   }
+
+  // -------------------------------------------------
+  // 5. ERROR UI
+  // -------------------------------------------------
+  Widget _errorWidget() => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(_error!, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: _fetchMedia, child: const Text('Retry')),
+          ],
+        ),
+      );
+}
+
+// -----------------------------------------------------------------
+// 6. SEPARATE TILE WIDGET – isolates the FutureBuilder logic
+// -----------------------------------------------------------------
+class _ThumbTile extends StatelessWidget {
+  final AssetEntity asset;
+  final Map<String, Uint8List> cache;
+
+  const _ThumbTile({required this.asset, required this.cache});
+
+  @override
+  Widget build(BuildContext context) {
+    // 1. Already in memory → instant
+    if (cache.containsKey(asset.id)) {
+      return _imageWidget(cache[asset.id]!);
+    }
+
+    // 2. Load once and store in cache
+    return FutureBuilder<Uint8List?>(
+      future: asset.thumbnailDataWithSize(const ThumbnailSize(200, 200)),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done &&
+            snapshot.data != null) {
+          // cache for later scrolls
+          cache[asset.id] = snapshot.data!;
+          return _imageWidget(snapshot.data!);
+        }
+        return Container(
+          color: Colors.grey[300],
+          child: const Center(
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _imageWidget(Uint8List bytes) => ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+        ),
+      );
 }
