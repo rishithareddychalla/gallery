@@ -1,13 +1,11 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:gallery/screens/image_editor_screen.dart';
+import 'package:image_editor_plus/image_editor_plus.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 class PhotoViewScreen extends StatefulWidget {
   final AssetEntity photo;
-
   const PhotoViewScreen({required this.photo, Key? key}) : super(key: key);
-
   @override
   State<PhotoViewScreen> createState() => _PhotoViewScreenState();
 }
@@ -21,13 +19,23 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final editedImage = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ImageEditorScreen(photo: widget.photo),
+                  builder: (context) => ImageEditor(
+                    image: (await widget.photo.originBytes)!,
+                  ),
                 ),
               );
+              if (editedImage != null) {
+                await PhotoManager.editor.saveImage(editedImage);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Photo saved')),
+                  );
+                }
+              }
             },
           ),
         ],
