@@ -77,23 +77,15 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Albums'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchAlbums,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? _errorWidget()
-              : _albums.isEmpty
-                  ? const Center(child: Text('No albums found'))
-                  : ListView.builder(
+    return _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _error != null
+            ? _errorWidget()
+            : _albums.isEmpty
+                ? const Center(child: Text('No albums found'))
+                : RefreshIndicator(
+                    onRefresh: _fetchAlbums,
+                    child: ListView.builder(
                       itemCount: _albums.length,
                       itemBuilder: (context, index) {
                         final album = _albums[index];
@@ -111,7 +103,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         );
                       },
                     ),
-    );
+                  );
   }
 
   Widget _errorWidget() => Center(

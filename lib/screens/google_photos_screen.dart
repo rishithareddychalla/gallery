@@ -86,29 +86,24 @@ class _GooglePhotosScreenState extends State<GooglePhotosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Google Photos'),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(child: Text(_error!))
-              : GridView.builder(
-                  controller: _scrollController,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 4.0,
-                    mainAxisSpacing: 4.0,
-                  ),
-                  itemCount: _photoUrls.length,
-                  itemBuilder: (context, index) {
-                    return Image.network(
-                      _photoUrls[index],
-                      fit: BoxFit.cover,
-                    );
-                  },
+    return _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _error != null
+            ? Center(child: Text(_error!))
+            : GridView.builder(
+                controller: _scrollController,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 4.0,
+                  mainAxisSpacing: 4.0,
                 ),
-    );
+                itemCount: _photoUrls.length,
+                itemBuilder: (context, index) {
+                  return Image.network(
+                    _photoUrls[index],
+                    fit: BoxFit.cover,
+                  );
+                },
+              );
   }
 }
