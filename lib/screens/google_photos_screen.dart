@@ -48,8 +48,17 @@ class _GooglePhotosScreenState extends State<GooglePhotosScreen> {
       final response = await _photosLibraryApiClient!
           .get('https://photoslibrary.googleapis.com/v1/mediaItems');
       final Map<String, dynamic> data = jsonDecode(response.body);
-      final List<dynamic> mediaItems = data['mediaItems'];
+      final List<dynamic>? mediaItems = data['mediaItems'];
       _nextPageToken = data['nextPageToken'];
+
+      if (mediaItems == null || mediaItems.isEmpty) {
+        setState(() {
+          _isLoading = false;
+          _error = 'No photos found.';
+        });
+        return;
+      }
+
       setState(() {
         _photoUrls =
             mediaItems.map((item) => item['baseUrl'] as String).toList();
@@ -71,8 +80,13 @@ class _GooglePhotosScreenState extends State<GooglePhotosScreen> {
       final response = await _photosLibraryApiClient!.get(
           'https://photoslibrary.googleapis.com/v1/mediaItems?pageToken=$_nextPageToken');
       final Map<String, dynamic> data = jsonDecode(response.body);
-      final List<dynamic> mediaItems = data['mediaItems'];
+      final List<dynamic>? mediaItems = data['mediaItems'];
       _nextPageToken = data['nextPageToken'];
+
+      if (mediaItems == null || mediaItems.isEmpty) {
+        return;
+      }
+
       setState(() {
         _photoUrls.addAll(
             mediaItems.map((item) => item['baseUrl'] as String).toList());
