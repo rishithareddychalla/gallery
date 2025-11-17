@@ -1,8 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:gallery/firebase_options.dart';
-import 'package:gallery/screens/local_photos_screen.dart';
-
+import 'package:gallery/screens/main_navigation_screen.dart';
+import 'package:gallery/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,10 +16,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Google Photos Gallery',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: LocalPhotosScreen(),
+    return ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Google Photos Gallery',
+            theme: ThemeData(
+              primarySwatch: Colors.blue,
+              brightness: Brightness.light,
+            ),
+            darkTheme: ThemeData(
+              primarySwatch: Colors.blue,
+              brightness: Brightness.dark,
+            ),
+            themeMode: themeProvider.themeMode,
+            home: const MainNavigationScreen(),
+          );
+        },
+      ),
     );
   }
 }

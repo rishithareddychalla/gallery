@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gallery/photos_library_api_client.dart';
+import 'package:gallery/widgets/theme_toggle_button.dart';
 
 class CloudPhotosScreen extends StatefulWidget {
   const CloudPhotosScreen({super.key});
@@ -175,6 +176,7 @@ class _CloudPhotosScreenState extends State<CloudPhotosScreen> {
       appBar: AppBar(
         title: const Text('Cloud Photos'),
         actions: [
+          const ThemeToggleButton(),
           if (_isLoggedIn)
             IconButton(
               icon: const Icon(Icons.logout),
@@ -186,10 +188,37 @@ class _CloudPhotosScreenState extends State<CloudPhotosScreen> {
       body: _isLoggedIn
           ? _buildPhotoGrid()
           : Center(
-              child: ElevatedButton.icon(
-                onPressed: _googleSignInHandler,
-                icon: const Icon(Icons.login),
-                label: const Text("Sign In with Google"),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.cloud_off, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Access Your Google Photos',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                    child: Text(
+                      'Sign in with your Google account to view and access photos stored in Google Photos.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: _googleSignInHandler,
+                    icon: const Icon(Icons.login),
+                    label: const Text("Sign In with Google"),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
     );
@@ -211,10 +240,7 @@ class _CloudPhotosScreenState extends State<CloudPhotosScreen> {
       ),
       itemCount: _photoUrls.length,
       itemBuilder: (context, index) {
-        return Image.network(
-          _photoUrls[index],
-          fit: BoxFit.cover,
-        );
+        return Image.network(_photoUrls[index], fit: BoxFit.cover);
       },
     );
   }

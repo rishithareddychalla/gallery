@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -6,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:gallery/screens/album_photos_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:gallery/widgets/theme_toggle_button.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({Key? key}) : super(key: key);
@@ -18,31 +18,65 @@ class _GalleryScreenState extends State<GalleryScreen> {
   List<AssetPathEntity> _albums = [];
   bool _isLoading = true;
   String? _error;
+  bool _permissionGranted = false;
+  bool _hasInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchAlbums();
+    // Don't call _initializeApp here to avoid Theme.of() error
   }
 
-  Future<void> _fetchAlbums() async {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      _initializeApp();
+    }
+  }
+
+  Future<void> _initializeApp() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
+    // Request permission first
     final PermissionStatus status = await _requestPermission();
     if (!status.isGranted) {
       setState(() {
-        _error = 'Permission denied. Please allow access to photos.';
+        _error =
+            'Permission denied. Please allow access to photos in your device settings.';
         _isLoading = false;
+        _permissionGranted = false;
       });
       return;
     }
 
+    setState(() {
+      _permissionGranted = true;
+    });
+
+    // Then fetch albums
+    await _fetchAlbums();
+  }
+
+  Future<void> _fetchAlbums() async {
+    if (!_permissionGranted) {
+      await _initializeApp();
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
     try {
-      final List<AssetPathEntity> albums =
-          await PhotoManager.getAssetPathList(type: RequestType.common);
+      final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+        type: RequestType.common,
+      );
       setState(() {
         _albums = albums;
         _isLoading = false;
@@ -56,7 +90,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   Future<PermissionStatus> _requestPermission() async {
-    if (Theme.of(context).platform == TargetPlatform.iOS) {
+    if (Platform.isIOS) {
       return await Permission.photos.request();
     }
 
@@ -81,52 +115,47 @@ class _GalleryScreenState extends State<GalleryScreen> {
       appBar: AppBar(
         title: const Text('Albums'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchAlbums,
-          ),
+          
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchAlbums),
+          const ThemeToggleButton(),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _errorWidget()
-              : _albums.isEmpty
-                  ? const Center(child: Text('No albums found'))
-                  : ListView.builder(
-                      itemCount: _albums.length,
-                      itemBuilder: (context, index) {
-                        final album = _albums[index];
-                        return _AlbumTile(
-                          album: album,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    AlbumPhotosScreen(album: album),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
+          ? _errorWidget()
+          : _albums.isEmpty
+          ? const Center(child: Text('No albums found'))
+          : ListView.builder(
+              itemCount: _albums.length,
+              itemBuilder: (context, index) {
+                final album = _albums[index];
+                return _AlbumTile(
+                  album: album,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AlbumPhotosScreen(album: album),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
     );
   }
 
   Widget _errorWidget() => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(_error!, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _fetchAlbums,
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(_error!, textAlign: TextAlign.center),
+        const SizedBox(height: 16),
+        ElevatedButton(onPressed: _fetchAlbums, child: const Text('Retry')),
+      ],
+    ),
+  );
 }
 
 class _AlbumTile extends StatelessWidget {
@@ -180,11 +209,7 @@ class _AlbumTile extends StatelessWidget {
           );
         }
         return ListTile(
-          leading: Container(
-            width: 80,
-            height: 80,
-            color: Colors.grey[300],
-          ),
+          leading: Container(width: 80, height: 80, color: Colors.grey[300]),
           title: Text(album.name),
           subtitle: FutureBuilder<int>(
             future: album.assetCountAsync,
