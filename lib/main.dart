@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:gallery/firebase_options.dart';
 import 'package:gallery/screens/main_navigation_screen.dart';
+import 'package:gallery/screens/shared_image_view_screen.dart';
 import 'package:gallery/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,8 +15,49 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late StreamSubscription _intentSub;
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _intentSub =
+        ReceiveSharingIntent.instance.getMediaStream().listen((value) {
+      if (value.isNotEmpty) {
+        _navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) =>
+                SharedImageViewScreen(imagePath: value.first.path),
+          ),
+        );
+      }
+    });
+
+    ReceiveSharingIntent.instance.getInitialMedia().then((value) {
+      if (value.isNotEmpty) {
+        _navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) =>
+                SharedImageViewScreen(imagePath: value.first.path),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _intentSub.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +66,7 @@ class MyApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
+            navigatorKey: _navigatorKey,
             debugShowCheckedModeBanner: false,
             title: 'Gallery',
             theme: ThemeData(
