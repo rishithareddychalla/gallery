@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_editor_plus/image_editor_plus.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'dart:io';
 
 class PhotoViewScreen extends StatefulWidget {
   final AssetEntity photo;
@@ -27,6 +29,25 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
       setState(() {
         _currentImageData = bytes;
       });
+    }
+  }
+
+  Future<void> _shareImage() async {
+    if (_currentImageData == null) return;
+
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final tempFile =
+          await File('${tempDir.path}/share_image.jpg').create();
+      await tempFile.writeAsBytes(_currentImageData!);
+
+      await Share.shareXFiles([XFile(tempFile.path)], text: 'Check out this photo!');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Share failed: $e')),
+        );
+      }
     }
   }
 
@@ -99,6 +120,10 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: _currentImageData != null ? _editImage : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: _currentImageData != null ? _shareImage : null,
           ),
           IconButton(
             icon: const Icon(Icons.save),
