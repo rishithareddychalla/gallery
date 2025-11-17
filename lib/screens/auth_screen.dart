@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -17,12 +16,10 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // IMPORTANT → For google_sign_in: ^7.2.0
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'openid',
-      'https://www.googleapis.com/auth/photoslibrary.readonly',
-    ],
-    serverClientId: "730140148453-52a77dqnecglc36pcrhgtn86k1f1cib9.apps.googleusercontent.com", // ← VERY IMPORTANT !!!
+    scopes: ['email', 'https://www.googleapis.com/auth/photoslibrary.readonly'],
+    serverClientId:
+        // "730140148453-52a77dqnecglc36pcrhgtn86k1f1cib9.apps.googleusercontent.com", // ← VERY IMPORTANT !!!
+        "730140148453-52a77dqnecglc36pcrhgtn86k1f1cib9.apps.googleusercontent.com",
   );
 
   final _emailController = TextEditingController();
@@ -73,46 +70,78 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  // Future<void> _googleSignInHandler() async {
+  //   try {
+  //     final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+  //     if (googleUser == null) return;
+
+  //     // Firebase Auth Login
+  //     final googleAuth = await googleUser.authentication;
+  //     final credential = GoogleAuthProvider.credential(
+  //       idToken: googleAuth.idToken,
+  //       accessToken: googleAuth.accessToken,
+  //     );
+
+  //     await _auth.signInWithCredential(credential);
+
+  //     // Navigate to Google Photos Page
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(
+  //         builder: (context) => GooglePhotosScreen(googleSignIn: _googleSignIn),
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     debugPrint("Google Sign-In error: $e");
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text('Google Sign-In failed: $e'),
+  //         backgroundColor: Colors.red,
+  //       ),
+  //     );
+  //   }
+  // }
   Future<void> _googleSignInHandler() async {
     try {
+      // IMPORTANT — completely clear old Google session
+      // await _googleSignIn.disconnect();
+      await _googleSignIn.signOut();
+
+      // Now sign in fresh
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return;
 
-      // Firebase Auth Login
+      // Get tokens
       final googleAuth = await googleUser.authentication;
+
+      print("ID TOKEN: ${googleAuth.idToken}");
+      print("ACCESS TOKEN: ${googleAuth.accessToken}");
+
+      print("AUTH HEADERS: ${await googleUser.authHeaders}");
+
+      // Firebase login
       final credential = GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
         accessToken: googleAuth.accessToken,
       );
 
-      await _auth.signInWithCredential(credential);
+      await FirebaseAuth.instance.signInWithCredential(credential);
 
-      // Navigate to Google Photos Page
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => GooglePhotosScreen(
-            googleSignIn: _googleSignIn,
-          ),
+          builder: (context) => GooglePhotosScreen(googleSignIn: _googleSignIn),
         ),
       );
     } catch (e) {
-      debugPrint("Google Sign-In error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Google Sign-In failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      print("GOOGLE LOGIN ERROR: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gallery App'),
-      ),
+      appBar: AppBar(title: const Text('Gallery App')),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(

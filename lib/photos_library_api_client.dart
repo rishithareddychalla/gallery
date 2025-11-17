@@ -24,16 +24,50 @@ class PhotosLibraryApiClient {
 
   final GoogleSignIn _googleSignIn;
 
-  Future<http.Response> get(String url) {
-    return _googleSignIn.currentUser!.authHeaders
-        .then((headers) => http.get(Uri.parse(url), headers: headers));
+  Future<http.Response> get(String url) async {
+    try {
+      final user = _googleSignIn.currentUser;
+      if (user == null) {
+        throw Exception('User not signed in');
+      }
+
+      print('Making GET request to: $url');
+      final headers = await user.authHeaders;
+      print('Auth headers: ${headers.keys}');
+
+      final response = await http.get(Uri.parse(url), headers: headers);
+      print('GET response status: ${response.statusCode}');
+
+      return response;
+    } catch (e) {
+      print('Error in GET request: $e');
+      rethrow;
+    }
   }
 
-  Future<http.Response> post(String url, String json) {
-    return _googleSignIn.currentUser!.authHeaders.then((headers) {
+  Future<http.Response> post(String url, String json) async {
+    try {
+      final user = _googleSignIn.currentUser;
+      if (user == null) {
+        throw Exception('User not signed in');
+      }
+
+      print('Making POST request to: $url');
+      final headers = await user.authHeaders;
       headers['Content-Type'] = 'application/json';
-      return http.post(Uri.parse(url), headers: headers, body: json);
-    });
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: json,
+      );
+      print('POST response status: ${response.statusCode}');
+
+      return response;
+    } catch (e) {
+      print('Error in POST request: $e');
+      rethrow;
+    }
   }
 
   Future<String> upload(File image) async {
@@ -47,8 +81,11 @@ class PhotosLibraryApiClient {
     request.headers['X-Goog-Upload-File-Name'] = filename;
     request.headers['X-Goog-Upload-Protocol'] = 'raw';
     request.contentLength = image.lengthSync();
-    image.openRead().listen(request.sink.add,
-        onDone: request.sink.close, onError: request.sink.addError);
+    image.openRead().listen(
+      request.sink.add,
+      onDone: request.sink.close,
+      onError: request.sink.addError,
+    );
     final http.StreamedResponse response = await request.send();
     return response.stream.bytesToString();
   }
