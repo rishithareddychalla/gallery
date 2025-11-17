@@ -41,7 +41,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
           await File('${tempDir.path}/share_image.jpg').create();
       await tempFile.writeAsBytes(_currentImageData!);
 
-      await Share.shareXFiles([XFile(tempFile.path)], text: 'Check out this photo!');
+      await Share.shareXFiles([XFile(tempFile.path)]);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -114,7 +114,6 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Photo'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
