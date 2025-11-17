@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
             theme: ThemeData(
               useMaterial3: true,
               colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF6366F1), // Indigo
+                seedColor: const Color.fromARGB(255, 1, 2, 51), // Indigo
                 brightness: Brightness.light,
               ),
               appBarTheme: const AppBarTheme(
@@ -54,7 +54,7 @@ class MyApp extends StatelessWidget {
             darkTheme: ThemeData(
               useMaterial3: true,
               colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF8B5CF6), // Purple
+                seedColor: const Color.fromARGB(255, 18, 28, 39), // Purple
                 brightness: Brightness.dark,
               ),
               scaffoldBackgroundColor: const Color(0xFF0F172A),
