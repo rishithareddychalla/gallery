@@ -176,13 +176,13 @@ class _CloudPhotosScreenState extends State<CloudPhotosScreen> {
       appBar: AppBar(
         title: const Text('Cloud Photos'),
         actions: [
-          const ThemeToggleButton(),
           if (_isLoggedIn)
             IconButton(
               icon: const Icon(Icons.logout),
               onPressed: _signOut,
               tooltip: 'Sign Out',
             ),
+          const ThemeToggleButton(),
         ],
       ),
       body: _isLoggedIn
@@ -229,7 +229,7 @@ class _CloudPhotosScreenState extends State<CloudPhotosScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_error != null) {
-      return Center(child: Text('Error: $_error'));
+      return Center(child: Text("Coming soon")); //'Error: $_error'
     }
     return GridView.builder(
       controller: _scrollController,
