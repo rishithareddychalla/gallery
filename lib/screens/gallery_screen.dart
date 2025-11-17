@@ -126,22 +126,31 @@ class _GalleryScreenState extends State<GalleryScreen> {
           ? _errorWidget()
           : _albums.isEmpty
           ? const Center(child: Text('No albums found'))
-          : ListView.builder(
-              itemCount: _albums.length,
-              itemBuilder: (context, index) {
-                final album = _albums[index];
-                return _AlbumTile(
-                  album: album,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AlbumPhotosScreen(album: album),
-                      ),
-                    );
-                  },
-                );
-              },
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.85,
+                  crossAxisSpacing: 16.0,
+                  mainAxisSpacing: 16.0,
+                ),
+                itemCount: _albums.length,
+                itemBuilder: (context, index) {
+                  final album = _albums[index];
+                  return _AlbumCard(
+                    album: album,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AlbumPhotosScreen(album: album),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
     );
   }
@@ -158,68 +167,209 @@ class _GalleryScreenState extends State<GalleryScreen> {
   );
 }
 
-class _AlbumTile extends StatelessWidget {
+class _AlbumCard extends StatelessWidget {
   final AssetPathEntity album;
   final VoidCallback onTap;
 
-  const _AlbumTile({required this.album, required this.onTap});
+  const _AlbumCard({required this.album, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<AssetEntity>>(
-      future: album.getAssetListRange(start: 0, end: 1),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done &&
-            snapshot.hasData &&
-            snapshot.data!.isNotEmpty) {
-          final asset = snapshot.data!.first;
-          return ListTile(
-            leading: FutureBuilder<Uint8List?>(
-              future: asset.thumbnailDataWithSize(const ThumbnailSize(80, 80)),
-              builder: (context, thumbSnapshot) {
-                if (thumbSnapshot.connectionState == ConnectionState.done &&
-                    thumbSnapshot.data != null) {
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(
-                      thumbSnapshot.data!,
-                      fit: BoxFit.cover,
-                      width: 80,
-                      height: 80,
-                      gaplessPlayback: true,
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: FutureBuilder<List<AssetEntity>>(
+                future: album.getAssetListRange(start: 0, end: 1),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(12),
+                          topRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    );
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(12),
+                          topRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.photo_library,
+                          size: 48,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    );
+                  }
+
+                  final asset = snapshot.data!.first;
+                  return _AlbumThumbnail(asset: asset);
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    album.name,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                  );
-                }
-                return Container(
-                  width: 80,
-                  height: 80,
-                  color: Colors.grey[300],
-                );
-              },
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  FutureBuilder<int>(
+                    future: album.assetCountAsync,
+                    builder: (context, snapshot) {
+                      final count = snapshot.data ?? 0;
+                      return Text(
+                        '$count ${count == 1 ? 'item' : 'items'}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-            title: Text(album.name),
-            subtitle: FutureBuilder<int>(
-              future: album.assetCountAsync,
-              builder: (context, snapshot) {
-                final count = snapshot.data ?? 0;
-                return Text('$count items');
-              },
-            ),
-            onTap: onTap,
-          );
-        }
-        return ListTile(
-          leading: Container(width: 80, height: 80, color: Colors.grey[300]),
-          title: Text(album.name),
-          subtitle: FutureBuilder<int>(
-            future: album.assetCountAsync,
-            builder: (context, snapshot) {
-              final count = snapshot.data ?? 0;
-              return Text('$count items');
-            },
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AlbumThumbnail extends StatefulWidget {
+  final AssetEntity asset;
+
+  const _AlbumThumbnail({required this.asset});
+
+  @override
+  State<_AlbumThumbnail> createState() => _AlbumThumbnailState();
+}
+
+class _AlbumThumbnailState extends State<_AlbumThumbnail>
+    with AutomaticKeepAliveClientMixin {
+  Uint8List? _thumbnailData;
+  bool _isLoading = true;
+  bool _hasError = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThumbnail();
+  }
+
+  Future<void> _loadThumbnail() async {
+    try {
+      // Use smaller thumbnail size for faster loading
+      final thumbnailData = await widget.asset.thumbnailDataWithSize(
+        const ThumbnailSize(200, 200),
+      );
+
+      if (mounted) {
+        setState(() {
+          _thumbnailData = thumbnailData;
+          _isLoading = false;
+          _hasError = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
+    if (_isLoading) {
+      return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(12),
+            topRight: Radius.circular(12),
           ),
-        );
-      },
+        ),
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    if (_hasError || _thumbnailData == null) {
+      return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(12),
+            topRight: Radius.circular(12),
+          ),
+        ),
+        child: const Center(
+          child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(12),
+        topRight: Radius.circular(12),
+      ),
+      child: Image.memory(
+        _thumbnailData!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        gaplessPlayback: true,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded) {
+            return child;
+          }
+          return AnimatedOpacity(
+            opacity: frame == null ? 0 : 1,
+            duration: const Duration(milliseconds: 200),
+            child: child,
+          );
+        },
+      ),
     );
   }
 }
