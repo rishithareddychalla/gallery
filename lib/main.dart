@@ -1,7 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:gallery/firebase_options.dart';
-import 'package:gallery/screens/auth_screen.dart';
+import 'package:gallery/screens/local_photos_screen.dart';
 
 
 void main() async {
@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Google Photos Gallery',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: AuthScreen(),
+      home: LocalPhotosScreen(),
     );
   }
 }
