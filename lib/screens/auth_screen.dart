@@ -100,6 +100,8 @@ class _AuthScreenState extends State<AuthScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Image.asset('assets/image.png'),
+            const SizedBox(height: 48),
             const Text(
               'Welcome to Gallery',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
